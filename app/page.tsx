@@ -304,7 +304,7 @@ export default function Home() {
         window.removeEventListener("scroll", handleScroll);
       };
     }
-  }, [])
+  }, [visibleSection])
 
   // Filter projects
   const filteredProjects =
@@ -548,7 +548,7 @@ export default function Home() {
                     I'm a Computer Science student at{" "}
                     <span className="font-semibold text-violet-600 dark:text-violet-400">Syracuse University</span> with
                     professional experience as a Full Stack Software Engineer, including my time on the Cloud and Platform Engineering team at Fidelity Investments.
-                    I'm also the Founding Engineer and CTO at PapeX, where I lead the development of modern web and mobile applications using technologies like{" "}
+                    I&apos;m also the Founding Engineer and CTO at PapeX, where I lead the development of modern web and mobile applications using technologies like{" "}
                     <span className="font-semibold text-pink-500">React Native</span>,{" "}
                     <span className="font-semibold text-pink-500">TypeScript</span>, and{" "}
                     <span className="font-semibold text-green-500">Next.js</span>. My expertise extends to cloud services such as <span className="font-semibold text-green-500">AWS</span>, <span className="font-semibold text-green-500">Kubernetes</span>, and <span className="font-semibold text-green-500">Docker</span>, and database technologies like <span className="font-semibold text-blue-500">PostgreSQL</span>, <span className="font-semibold text-blue-500">MongoDB</span>, and <span className="font-semibold text-blue-500">DynamoDB</span>.
