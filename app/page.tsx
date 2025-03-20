@@ -75,6 +75,16 @@ const CustomCursor = () => {
 const projects = [
   {
     id: 1,
+    title: "Calendar Scheduling AI Agent",
+    description:
+      "An AI agent that analyzes tasks and automatically schedules them in the most efficient time slots by integrating with Google Calendar using Claude's advanced AI capabilities.",
+    image: "/projectImages/AI Agent Image Mar 20 2025.jpeg",
+    tags: ["Next.js", "TypeScript", "Claude API", "Google Cloud", "AI"],
+    date: "Jan 2025",
+    githubLink: "https://github.com/RaasinRahman/todayCalendarAgent",
+  },
+  {
+    id: 2,
     title: "Chess.com Stats Analyzer",
     description:
       "A web application leveraging Chess.com's public API to fetch and analyze player data, including game history, win/loss ratios, and strategic patterns.",
@@ -84,7 +94,7 @@ const projects = [
     githubLink: "https://github.com/RaasinRahman/Chess.comStats",
   },
   {
-    id: 2,
+    id: 3,
     title: "Sentiments and Trends on Sustainability",
     description:
       "Explored public sentiment, social network structures, and real-time trends around sustainability topics on social media platforms, focusing particularly on Twitter/X.",
@@ -94,7 +104,7 @@ const projects = [
     githubLink: "https://github.com/RaasinRahman/Analyzing-Social-Media-Sentiments-and-Trends-on-Sustainability",
   },
   {
-    id: 3,
+    id: 4,
     title: "HelloMessenger",
     description:
       "Inspired by the need for secure, decentralized communication, developed HelloMessenger using Web3 technologies for enhanced data privacy and user empowerment.",
@@ -465,32 +475,29 @@ export default function Home() {
                   const initialX = colPosition * (windowWidth / gridCols) + 100;
                   const initialY = rowPosition * (windowHeight / gridRows) + 100;
                   
-                  // Use deterministic speeds for smoother animations
-                  const speeds = [60, 70, 80, 90, 100];
+                  // Use much faster speeds for more noticeable movement
+                  const speeds = [15, 18, 20, 22, 25];
                   const speed = speeds[i % speeds.length];
                   
-                  // Calculate movement bounds - smaller movement range for smoother motion
-                  const moveRange = 30;
+                  // Calculate movement bounds - significantly increased movement range for more dramatic motion
+                  const moveRange = 80;
                   
                   return (
                     <motion.div
                       key={i}
-                      className="absolute rounded-full bg-gradient-to-br from-pink-400 to-purple-500 opacity-10 dark:opacity-20"
-                      initial={{
-                        x: initialX,
-                        y: initialY,
-                      }}
+                      className="absolute rounded-full bg-gradient-to-br from-pink-400 to-purple-500 opacity-20 dark:opacity-30"
                       animate={{
-                        x: [initialX - moveRange, initialX + moveRange],
-                        y: [initialY - moveRange, initialY + moveRange],
-                        rotate: [0, 360],
+                        x: [initialX - moveRange, initialX + moveRange, initialX - moveRange],
+                        y: [initialY - moveRange, initialY + moveRange, initialY - moveRange],
+                        rotate: [0, 180, 360],
                       }}
                       transition={{
                         duration: speed,
                         repeat: Infinity,
-                        repeatType: "mirror",
-                        ease: "easeInOut",
-                        times: [0, 1],
+                        repeatType: "loop",
+                        ease: "linear",
+                        times: [0, 0.5, 1],
+                        delay: i * 0.1, // Less delay for a more active scene
                       }}
                       style={{
                         width: `${size}px`,
