@@ -71,7 +71,7 @@ const CustomCursor = () => {
   )
 }
 
-// Project data
+// Project data with GitHub links
 const projects = [
   {
     id: 1,
@@ -81,6 +81,7 @@ const projects = [
     image: "/projectImages/chess.png",
     tags: ["JavaScript", "Chess.com API", "Data Visualization"],
     date: "Jan 2025",
+    githubLink: "https://github.com/RaasinRahman/Chess.comStats",
   },
   {
     id: 2,
@@ -90,6 +91,7 @@ const projects = [
     image: "/projectImages/sustainability.png",
     tags: ["Python", "TensorFlow", "NetworkX", "Tweepy", "Matplotlib"],
     date: "Sep 2024",
+    githubLink: "https://github.com/RaasinRahman/Analyzing-Social-Media-Sentiments-and-Trends-on-Sustainability",
   },
   {
     id: 3,
@@ -100,6 +102,7 @@ const projects = [
     tags: ["React Native", "TypeScript", "JavaScript", "Firebase", "Git"],
     date: "Dec 2023",
     award: "Best Security Hack - CuseHacks Hackathon",
+    githubLink: "https://github.com/RaasinRahman/helloMessenger",
   },
 ]
 
@@ -174,10 +177,32 @@ export default function Home() {
   const [activeProject, setActiveProject] = useState<number | null>(null)
   const [activeFilter, setActiveFilter] = useState("All")
   const [visibleSection, setVisibleSection] = useState("hero")
+  const [isMobile, setIsMobile] = useState(false)
 
   // After mounting, we can safely show the UI that depends on the theme
   useEffect(() => {
     setMounted(true)
+    
+    // Detect mobile devices for performance optimizations
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Run once on mount
+    checkMobile();
+    
+    // Recheck on resize with debounce
+    let resizeTimeout: ReturnType<typeof setTimeout>;
+    const handleResize = () => {
+      if (resizeTimeout) clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(checkMobile, 100);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => {
+      if (resizeTimeout) clearTimeout(resizeTimeout);
+      window.removeEventListener('resize', handleResize);
+    };
   }, [])
 
   const { scrollYProgress } = useScroll()
@@ -189,119 +214,129 @@ export default function Home() {
   const experienceRef = useRef<HTMLElement>(null)
   const contactRef = useRef<HTMLElement>(null)
 
-  // Parallax effect for hero section
-  const heroBackgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "50%"])
+  // We're not using parallax for the background orbs anymore
+  // They stay fixed while content scrolls
 
-  // Enhanced intersection observer to detect visible section more accurately
+  // Optimized section detection with better initial loading behavior
   useEffect(() => {
     if (typeof window !== "undefined") {
-      // Track all section intersections with their ratios
-      const intersectionRatios = {
-        hero: 0,
-        about: 0,
-        projects: 0,
-        experience: 0,
-        contact: 0
+      // Using a debounced scroll handler for better performance
+      let scrollTimeout: ReturnType<typeof setTimeout>;
+      
+      // More robust section detection function
+      const determineActiveSection = () => {
+        const viewportHeight = window.innerHeight;
+        const scrollPosition = window.scrollY;
+        const documentHeight = document.body.offsetHeight;
+        
+        // Special case for page top - always show hero
+        if (scrollPosition < 100) {
+          if (visibleSection !== "hero") {
+            setVisibleSection("hero");
+          }
+          return;
+        }
+        
+        // Special case for page bottom - always show contact
+        if (scrollPosition + viewportHeight >= documentHeight - 100) {
+          if (visibleSection !== "contact") {
+            setVisibleSection("contact");
+          }
+          return;
+        }
+        
+        // Get all sections
+        const sections = [
+          { id: "hero", el: document.getElementById("hero") },
+          { id: "about", el: document.getElementById("about") },
+          { id: "projects", el: document.getElementById("projects") },
+          { id: "experience", el: document.getElementById("experience") },
+          { id: "contact", el: document.getElementById("contact") }
+        ];
+        
+        // Calculate visibility score for each section
+        let maxVisibilityScore = 0;
+        let maxVisibleSection = visibleSection;
+        
+        sections.forEach(({id, el}) => {
+          if (!el) return;
+          
+          const rect = el.getBoundingClientRect();
+          
+          // Calculate how much of the section is in the viewport (as a percentage)
+          const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+          const sectionHeight = rect.height;
+          
+          // A section is visible if we can see some of it 
+          // AND it occupies a significant portion of the viewport OR it's near the top of the viewport
+          if (visibleHeight > 0) {
+            // Calculate a weighted visibility score that prioritizes sections at the top of the viewport
+            const visibilityPercent = visibleHeight / sectionHeight;
+            
+            // Bias toward top of viewport (sections where the top is visible or just off-screen)
+            const topPositionBias = 1 - (Math.max(0, rect.top) / viewportHeight);
+            
+            // Combine these factors for a final visibility score
+            const visibilityScore = (visibilityPercent * 0.7) + (topPositionBias * 0.3);
+            
+            if (visibilityScore > maxVisibilityScore) {
+              maxVisibilityScore = visibilityScore;
+              maxVisibleSection = id;
+            }
+          }
+        });
+        
+        // Only update if the section changed and we have a reasonable confidence
+        if (maxVisibleSection !== visibleSection && maxVisibilityScore > 0.15) {
+          setVisibleSection(maxVisibleSection);
+        }
       };
       
-      // Create observer with more sensitive settings
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            // Update ratio for the current section
-            if (entry.target.id) {
-              const targetId = entry.target.id as keyof typeof intersectionRatios;
-              // When a section enters or exits viewport
-              intersectionRatios[targetId] = entry.intersectionRatio;
-              
-              // Immediately find the section with the highest visibility ratio
-              let maxSection = "hero";
-              let maxRatio = 0;
-              
-              Object.entries(intersectionRatios).forEach(([section, ratio]) => {
-                if (ratio > maxRatio) {
-                  maxRatio = ratio;
-                  maxSection = section;
-                }
-              });
-              
-              // Special case: if we're at the top of the page, highlight hero
-              if (window.scrollY < 100) {
-                maxSection = "hero";
-              }
-              
-              // Update the visible section with more sensitivity for all sections
-              if ((maxRatio > 0.05 || ["hero", "about"].includes(maxSection)) && maxSection !== visibleSection) {
-                // Update the visible section state - immediately activate About section with even lower threshold
-                setVisibleSection(maxSection);
-              }
-            }
-          });
-        },
-        { 
-          threshold: [0, 0.05, 0.1, 0.15, 0.2], // Lower thresholds for more sensitive detection
-          rootMargin: "-5% 0px -5% 0px" // Less aggressive margin to better detect sections
-        }
-      );
-
-      const sections = [
-        document.getElementById("hero"),
-        document.getElementById("about"),
-        document.getElementById("projects"),
-        document.getElementById("experience"),
-        document.getElementById("contact"),
-      ];
-
-      sections.forEach((section) => {
-        if (section) observer.observe(section);
-      });
-
-      // Enhanced scroll tracking for better section detection
+      // Immediate call to set initial active section
+      setTimeout(determineActiveSection, 100);
+      
+      // Debounced scroll handler for better performance
       const handleScroll = () => {
-        // If we're at the very top, always highlight hero
-        if (window.scrollY < 50) {
-          setVisibleSection("hero");
-          return;
-        }
-        
-        // If we're at the very bottom, highlight contact
-        const isAtBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 100;
-        if (isAtBottom) {
-          setVisibleSection("contact");
-          return;
-        }
-        
-        // Check if we're in the About section area
-        const aboutSection = document.getElementById("about");
-        if (aboutSection) {
-          const aboutRect = aboutSection.getBoundingClientRect();
-          // If About section is mostly visible in the viewport
-          if (aboutRect.top < window.innerHeight/2 && aboutRect.bottom > window.innerHeight/3) {
-            setVisibleSection("about");
-            return;
-          }
-        }
-        
-        // Check other sections similarly
-        ["projects", "experience"].forEach(sectionId => {
-          const section = document.getElementById(sectionId);
-          if (section) {
-            const rect = section.getBoundingClientRect();
-            // If section is partially visible in the viewport
-            if (rect.top < window.innerHeight*0.7 && rect.bottom > window.innerHeight*0.3) {
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(determineActiveSection, 10); // Small timeout for smoother updates
+      };
+      
+      // For really smooth section tracking, also use IntersectionObserver for key transition points
+      const observerOptions = {
+        threshold: [0.1, 0.2, 0.3, 0.4, 0.5], // More granular thresholds
+        rootMargin: "-10% 0px -10% 0px" // Focus on center area of viewport
+      };
+      
+      const sectionObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          // Only care about sections coming into significant view
+          if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
+            const sectionId = entry.target.id;
+            if (sectionId && sectionId !== visibleSection) {
               setVisibleSection(sectionId);
             }
           }
         });
-      };
+      }, observerOptions);
       
+      // Observe all sections
+      ["hero", "about", "projects", "experience", "contact"].forEach(id => {
+        const section = document.getElementById(id);
+        if (section) sectionObserver.observe(section);
+      });
+      
+      // Add scroll listener with passive flag for better performance
       window.addEventListener("scroll", handleScroll, { passive: true });
-
+      
       return () => {
-        sections.forEach((section) => {
-          if (section) observer.unobserve(section);
-        });
+        // Clean up
+        if (scrollTimeout) clearTimeout(scrollTimeout);
         window.removeEventListener("scroll", handleScroll);
+        
+        ["hero", "about", "projects", "experience", "contact"].forEach(id => {
+          const section = document.getElementById(id);
+          if (section) sectionObserver.unobserve(section);
+        });
       };
     }
   }, [visibleSection])
@@ -313,16 +348,41 @@ export default function Home() {
   // Get all unique tags for filter
   const allTags = ["All", ...Array.from(new Set(projects.flatMap((project) => project.tags)))]
 
-  // Don't render UI elements that depend on theme until mounted
+  // Ensure content loads and displays properly
+  useEffect(() => {
+    // Force immediate visibility of content when component mounts
+    if (typeof window !== "undefined") {
+      // Ensure hero section is immediately visible
+      setVisibleSection("hero");
+      
+      // Ensure scroll position is at top
+      window.scrollTo(0, 0);
+      
+      // Fix for content not showing until scroll by simulating a tiny scroll after a delay
+      const scrollTimer = setTimeout(() => {
+        window.scrollTo(0, 1);
+        // Scroll back to top after a tiny delay
+        setTimeout(() => window.scrollTo(0, 0), 50);
+      }, 100);
+      
+      return () => clearTimeout(scrollTimer);
+    }
+  }, [mounted]);
+  
+  // Pre-render a loading skeleton instead of an empty div for better perceived performance
   if (!mounted) {
-    return <div className="min-h-screen bg-white dark:bg-gray-900"></div>
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
+        <div className="w-16 h-16 border-t-4 border-b-4 border-pink-500 rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen">
       <CustomCursor />
 
-      <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300">
+      <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 relative z-10">
         {/* Header */}
         <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
           <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -381,43 +441,75 @@ export default function Home() {
         <main>
           {/* Hero Section */}
           <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
-            <motion.div className="absolute inset-0 z-0" style={{ y: heroBackgroundY }}>
+            {/* Split background into two parts - fixed orbs and scrollable background */}
+            {/* Fixed orbs container that doesn't move with scroll */}
+            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800">
-                {/* Animated background shapes */}
-                {Array.from({ length: 20 }).map((_, i) => {
-                  const x = typeof window !== "undefined" ? Math.random() * window.innerWidth : 0;
-                  const y = typeof window !== "undefined" ? Math.random() * window.innerHeight : 0;
-                  const scale = Math.random() * 0.5 + 0.5;
-
+                {/* Animated background shapes - these will stay fixed regardless of scrolling */}
+                {/* Reduce the number of orbs on mobile for better performance */}
+                {Array.from({ length: isMobile ? 8 : 20 }).map((_, i) => {
+                  // Using deterministic values based on index to prevent re-renders from changing positions
+                  const baseSizes = [80, 120, 150, 200, 250, 300];
+                  const size = baseSizes[i % baseSizes.length];
+                  
+                  // Create a grid-like distribution for orbs
+                  const gridCols = 5;
+                  const gridRows = 4;
+                  const windowWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
+                  const windowHeight = typeof window !== "undefined" ? window.innerHeight : 800; 
+                  
+                  // Calculate positions with minimal randomness to reduce erratic movement
+                  const colPosition = i % gridCols;
+                  const rowPosition = Math.floor(i / gridCols) % gridRows;
+                  
+                  const initialX = colPosition * (windowWidth / gridCols) + 100;
+                  const initialY = rowPosition * (windowHeight / gridRows) + 100;
+                  
+                  // Use deterministic speeds for smoother animations
+                  const speeds = [60, 70, 80, 90, 100];
+                  const speed = speeds[i % speeds.length];
+                  
+                  // Calculate movement bounds - smaller movement range for smoother motion
+                  const moveRange = 30;
+                  
                   return (
                     <motion.div
                       key={i}
                       className="absolute rounded-full bg-gradient-to-br from-pink-400 to-purple-500 opacity-10 dark:opacity-20"
                       initial={{
-                        x: x,
-                        y: y,
-                        scale: scale,
+                        x: initialX,
+                        y: initialY,
                       }}
                       animate={{
-                        x: [x, Math.random() * window.innerWidth],
-                        y: [y, Math.random() * window.innerHeight],
-                        rotate: Math.random() * 360,
+                        x: [initialX - moveRange, initialX + moveRange],
+                        y: [initialY - moveRange, initialY + moveRange],
+                        rotate: [0, 360],
                       }}
                       transition={{
-                        duration: Math.random() * 20 + 20,
-                        repeat: Number.POSITIVE_INFINITY,
-                        repeatType: "reverse",
+                        duration: speed,
+                        repeat: Infinity,
+                        repeatType: "mirror",
+                        ease: "easeInOut",
+                        times: [0, 1],
                       }}
                       style={{
-                        width: `${Math.random() * 300 + 50}px`,
-                        height: `${Math.random() * 300 + 50}px`,
+                        width: `${size}px`,
+                        height: `${size}px`,
                         filter: "blur(40px)",
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        willChange: "transform", // Optimize for animations
+                        transform: "translateZ(0)", // Force hardware acceleration
+                        backfaceVisibility: "hidden", // Additional performance boost
+                        WebkitBackfaceVisibility: "hidden",
+                        MozBackfaceVisibility: "hidden"
                       }}
                     />
                   );
                 })}
               </div>
-            </motion.div>
+            </div>
 
             <motion.div
               className="container mx-auto px-4 z-10 text-center"
@@ -714,9 +806,11 @@ export default function Home() {
                             )}
                           </div>
 
-                          <button className="mt-4 px-4 py-2 bg-white text-indigo-600 rounded-full text-sm font-medium transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-150 hover:bg-opacity-90">
-                            View Details
-                          </button>
+                          <a href={project.githubLink} target="_blank" rel="noopener noreferrer">
+                            <button className="mt-4 px-4 py-2 bg-white text-indigo-600 rounded-full text-sm font-medium transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-150 hover:bg-opacity-90">
+                              View on GitHub
+                            </button>
+                          </a>
                         </div>
                       </div>
 
@@ -960,7 +1054,7 @@ export default function Home() {
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">GitHub</p>
                         <a
-                          href="https://github.com/"
+                          href="https://github.com/RaasinRahman"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-lg font-medium hover:text-pink-500 transition-colors"
@@ -1088,7 +1182,7 @@ export default function Home() {
                     <Linkedin className="w-5 h-5" />
                   </a>
                   <a
-                    href="https://github.com/"
+                    href="https://github.com/RaasinRahman"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gradient-to-r hover:from-pink-500 hover:to-indigo-500 hover:text-white transition-colors"
